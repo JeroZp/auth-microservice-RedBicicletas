@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from starlette.middleware.sessions import SessionMiddleware
+from app.core.config import settings
 from app.core.database import Base, engine
 from app.api.auth import router as auth_router
 
@@ -10,6 +12,9 @@ app = FastAPI(
     description="Microservice for authentication in the Red Bicicletas application.",
     version="1.0.0"
 )
+
+# Add session middleware for Google OAuth2
+app.add_middleware(SessionMiddleware, secret_key=settings.SECRET_KEY)
 
 app.include_router(auth_router)
 

@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.config import settings
 from app.schemas.auth import (
     RegisterRequest, RegisterResponse,
     LoginRequest, TokenResponse,
@@ -9,8 +11,11 @@ from app.schemas.auth import (
     PasswordResetRequest, MessageResponse
 )
 from app.services.auth_service import auth_service
+from app.services.oauth_service import oauth
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
+
+# ── Standard Auth ─────────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
@@ -45,3 +50,23 @@ def password_reset(payload: PasswordResetRequest, db: Session = Depends(get_db))
     """Reset password using a valid recovery token."""
     auth_service.reset_password(db, payload.token, payload.new_password)
     return {"message": "Password has been reset successfully."}
+
+# ── Google OAuth2 ─────────────────────────────────────────────────────────────
+
+@router.get("/google/login")
+async def google_login(request: Request):
+    """Redirect user to Google's OAuth2 consent screen."""
+    return await oauth.google.authorize_redirect(request, settings.GOOGLE_REDIRECT_URI)
+
+@router.get("/google/callback")
+async def google_callback(request: Request, db: Session = Depends(get_db)):
+    """Google callback. Create or get user and return JWT tokens."""
+    token = await oauth.google.authorize_access_token(request)
+    user_info = token.get("userinfo")
+    
+    if not user_info or not user_info.get("email"):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=400, detail="Failed to retrieve user info from Google.")
+    
+    tokens = auth_service.login_or_register_google(db, user_info["email"])
+    return tokens
