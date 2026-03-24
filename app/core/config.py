@@ -14,6 +14,14 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str
     GOOGLE_CLIENT_SECRET: str
     GOOGLE_REDIRECT_URI: str = "http://localhost:8000/auth/google/callback"
+    MAIL_USERNAME: str
+    MAIL_PASSWORD: str
+    MAIL_FROM: str
+    MAIL_SERVER: str = "smtp.gmail.com"
+    MAIL_PORT: int = 587
+    MAIL_STARTTLS: bool = True
+    MAIL_SSL_TLS: bool = False
+    FRONTEND_URL: str = "http://localhost:3000"
 
     class Config:
         env_file = ".env"

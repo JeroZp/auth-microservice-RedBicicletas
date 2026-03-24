@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
@@ -40,9 +40,9 @@ def logout(payload: RefreshRequest, db: Session = Depends(get_db)):
     return {"message": "Logged out successfully."}
 
 @router.post("/password-recovery", response_model=MessageResponse)
-def password_recovery(payload: PasswordRecoveryRequest, db: Session = Depends(get_db)):
+async def password_recovery(payload: PasswordRecoveryRequest, db: Session = Depends(get_db)):
     """Initiate password recovery process by sending a reset link to the user's email."""
-    message = auth_service.request_password_recovery(db, payload.email)
+    message = await auth_service.request_password_recovery(db, payload.email)
     return {"message": message}
 
 @router.post("/password-reset", response_model=MessageResponse)
@@ -65,7 +65,6 @@ async def google_callback(request: Request, db: Session = Depends(get_db)):
     user_info = token.get("userinfo")
     
     if not user_info or not user_info.get("email"):
-        from fastapi import HTTPException
         raise HTTPException(status_code=400, detail="Failed to retrieve user info from Google.")
     
     tokens = auth_service.login_or_register_google(db, user_info["email"])

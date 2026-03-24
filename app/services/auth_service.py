@@ -7,6 +7,8 @@ from fastapi import HTTPException, status
 from app.core.config import settings
 from app.core.security import hash_password, verify_password, create_access_token, create_refresh_token, decode_token
 from app.models.user import User, RefreshToken
+from app.core.email import send_password_recovery_email
+from app.models.user import User, RefreshToken
 
 
 class AuthService:
@@ -125,7 +127,7 @@ class AuthService:
 
     # ── Password Recovery ─────────────────────────────────────────────────────
 
-    def request_password_recovery(self, db: Session, email: str) -> str:
+    async def request_password_recovery(self, db: Session, email: str) -> str:
         user = db.query(User).filter(User.email == email).first()
 
         # Always return success to avoid user enumeration attacks
@@ -137,8 +139,7 @@ class AuthService:
         user.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
         db.commit()
 
-        # TO DO: Send email with reset link
-        # send_email(user.email, reset_token)
+        await send_password_recovery_email(user.email, reset_token)
 
         return "If the email exists, you will receive a password recovery link."
 
@@ -162,6 +163,24 @@ class AuthService:
         user.reset_token = None
         user.reset_token_expires = None
         db.commit()
+
+    # ── Google OAuth ──────────────────────────────────────────────────────────
+
+    def login_or_register_google(self, db: Session, email: str) -> dict:
+        user = db.query(User).filter(User.email == email).first()
+
+        if not user:
+            # Auto-register user
+            user = User(
+                email=email,
+                hashed_password="",
+                is_active=True
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+        return self._generate_tokens(db, user)
 
     # ── Internal helpers ──────────────────────────────────────────────────────
 
