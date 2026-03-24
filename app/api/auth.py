@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.schemas.auth import (
     RegisterRequest, RegisterResponse,
     LoginRequest, TokenResponse,
@@ -18,12 +19,14 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 # ── Standard Auth ─────────────────────────────────────────────────────────────
 
 @router.post("/register", response_model=RegisterResponse, status_code=201)
+@limiter.limit("10/minute")
 def register(payload: RegisterRequest, db: Session = Depends(get_db)):
     """Register a new user."""
     user = auth_service.register(db, payload.email, payload.password)
     return user
 
 @router.post("/login", response_model=TokenResponse)
+@limiter.limit("10/minute")
 def login(payload: LoginRequest, db: Session = Depends(get_db)):
     """Authenticate user with email and password. Returns access and refresh token."""
     return auth_service.login(db, payload.email, payload.password)
@@ -40,6 +43,7 @@ def logout(payload: RefreshRequest, db: Session = Depends(get_db)):
     return {"message": "Logged out successfully."}
 
 @router.post("/password-recovery", response_model=MessageResponse)
+@limiter.limit("5/minute")
 async def password_recovery(payload: PasswordRecoveryRequest, db: Session = Depends(get_db)):
     """Initiate password recovery process by sending a reset link to the user's email."""
     message = await auth_service.request_password_recovery(db, payload.email)
