@@ -57,6 +57,17 @@ class PasswordResetRequest(BaseModel):
     token: str
     new_password: str
 
+# ── Current User ───────────────────────────────────────────────────────────────────
+
+class UserResponse(BaseModel):
+    id: UUID
+    email: str
+    is_active: bool
+    is_locked: bool
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 # ── Generic Schema ──────────────────────────────────────────────────────────────────
 

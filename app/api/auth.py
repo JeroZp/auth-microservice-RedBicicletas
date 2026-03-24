@@ -1,15 +1,17 @@
 from fastapi import APIRouter, Depends, Request, HTTPException
-from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.config import settings
 from app.core.limiter import limiter
+from app.core.dependencies import get_current_user
+from app.models.user import User
 from app.schemas.auth import (
     RegisterRequest, RegisterResponse,
     LoginRequest, TokenResponse,
     RefreshRequest, PasswordRecoveryRequest,
-    PasswordResetRequest, MessageResponse
+    PasswordResetRequest, MessageResponse,
+    UserResponse
 )
 from app.services.auth_service import auth_service
 from app.services.oauth_service import oauth
@@ -54,6 +56,12 @@ def password_reset(payload: PasswordResetRequest, db: Session = Depends(get_db))
     """Reset password using a valid recovery token."""
     auth_service.reset_password(db, payload.token, payload.new_password)
     return {"message": "Password has been reset successfully."}
+
+# ── Current User Endpoint ───────────────────────────────────────────────────────
+@router.get("/me", response_model=UserResponse)
+def get_current_user_info(current_user: User = Depends(get_current_user)):
+    """Get current authenticated user's information."""
+    return current_user
 
 # ── Google OAuth2 ─────────────────────────────────────────────────────────────
 
