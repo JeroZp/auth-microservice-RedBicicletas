@@ -59,6 +59,7 @@ Authentication microservice for the **Red Bicicletas** platform. Built with **Fa
 
 | Technology | Purpose |
 |---|---|
+| Python 3.12.10 | Programmming Language |
 | FastAPI | Web framework |
 | PostgreSQL | Relational database |
 | SQLAlchemy | ORM |
